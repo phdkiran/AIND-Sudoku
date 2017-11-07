@@ -36,46 +36,76 @@ def naked_twins(values):
     Returns:
         the values dictionary with the naked twins eliminated from peers.
     """
-
     # Find all instances of naked twins
     # Eliminate the naked twins as possibilities for their peers in unit lists
-    # print(values)
-    # record keeping for traversed twins so double computation
-    print('naked_twins')
-    traversed_twins = []
-    for k, v in values.items():
-        if len(v) == 2:
-            for p in peers[k]:
-                if values[p] == v and (k, p) not in traversed_twins:
-                    print('found twin', k, p, values[k])
-                    traversed_twins.extend([(k, p), (p, k)])
-                    # print(traversed_twins)
-                    # I was going through all the peers first but I should limit the search
-                    # to the unitlists and not the entire peers
-                    # not_twins = peers[k] - set([p])
-                    not_twins = find_units(k, p)
-                    # print(f'peers for {k},{p} are: {not_twins}')
-                    # navigate through all the peers in unitlist
-                    # ex: {'E1', 'A1', 'G1', 'B1', 'H1', 'D1', 'F1'}
-                    for x in not_twins:
-                        # break two digits and go through each value and replace them in unitlists
-                        # '23' is split to '2' and '3'. '2','3' are replaced in unitlists
-                        z = values[x]
-                        for y in v:
-                            z = z.replace(y, '')
-                        if z != values[x]:
-                            # print(f'changing {x} from {values[x]} to {z}')
-                            assign_value(values, x, z)
-                            values[x] = z
-                        else:
-                            # print(f'no change for {x}: {values[x]}')
-                            pass
-                        pass
+    # print('naked_twins')
+    # navigate through unitlists and find the keys with 2 matching values
+    for u in unitlists:
+        # print('current unit: ', u)
+        # v_d = sorted(v_d, key=v_d.get)
+        traversed_twins = []
+        v_d = {x: values[x] for x in u if len(values[x]) == 2}
+        for k, v in v_d.items():
+            for k2, v2 in v_d.items():
+                if k != k2 and v == v2 and k not in traversed_twins:
+                    # print(f'twins found: {k} {k2} value {values[k]}')
+                    # done with the construction of traversed_twins
+                    # Now go and replace the values of the others
+                    for x in u:
+                        if x not in (k, k2):
+                            temp = values[x]
+                            # replace both values '2' and '3' from peers
+                            # '23' gets split to '2' and '3'
+                            for y in values[k]:
+                                temp = temp.replace(y, '')
+                            # Assign only if the value changed
+                            if temp != values[x]:
+                                # values[x] = temp
+                                values = assign_value(values, x, temp)
                     pass
+                # book keeping for traversed twins so double computation is eliminated
+                    traversed_twins.extend([k, k2])
+                    # print(traversed_twins)
                 pass
             pass
-    # print(len(values), values)
+        pass
     return values
+
+    ### old code -- refactored to new code with efficient search ###
+    # # twos_list = {k:v for k, v in values.items() if len(v) == 2}
+    # for k, v in values.items():
+    #     if len(v) == 2:
+    #         for p in peers[k]:
+    #             if values[p] == v and (k, p) not in traversed_twins:
+    #                 print('found twin', k, p, values[k])
+    #                 traversed_twins.extend([(k, p), (p, k)])
+    #                 # print(traversed_twins)
+    #                 # I was going through all the peers first but I should limit the search
+    #                 # to the unitlists and not the entire peers
+    #                 # not_twins = peers[k] - set([p])
+    #                 not_twins = find_units(k, p)
+    #                 # print(f'peers for {k},{p} are: {not_twins}')
+    #                 # navigate through all the peers in unitlist
+    #                 # ex: {'E1', 'A1', 'G1', 'B1', 'H1', 'D1', 'F1'}
+    #                 for x in not_twins:
+    #                     # break two digits and go through each value and replace them in unitlists
+    #                     # '23' is split to '2' and '3'. '2','3' are replaced in unitlists
+    #                     z = values[x]
+    #                     for y in v:
+    #                         z = z.replace(y, '')
+    #                     if z != values[x]:
+    #                         # print(f'changing {x} from {values[x]} to {z}')
+    #                         assign_value(values, x, z)
+    #                         values[x] = z
+    #                     else:
+    #                         # print(f'no change for {x}: {values[x]}')
+    #                         pass
+    #                     pass
+    #                 pass
+    #             pass
+    #         pass
+    # # print(len(values), values)
+    # return values
 
 
 def cross(A, B):
@@ -142,13 +172,13 @@ def eliminate(values):
     Returns:
         Resulting Sudoku in dictionary form after eliminating values.
     """
-    print('eliminate')
+    # print('eliminate')
     for k, v in values.items():
         if len(v) == 1:
             for x in peers[k]:
                 value = values[x].replace(v, '')
-                assign_value(values, x, value)
-                values[x] = value
+                values = assign_value(values, x, value)
+                # values[x] = value
                 pass
             pass
         pass
@@ -164,20 +194,20 @@ def only_choice(values):
     Input: Sudoku in dictionary form.
     Output: Resulting Sudoku in dictionary form after filling in only choices.
     """
-    print('only_choice')
+    # print('only_choice')
     for k, v in values.items():
         compound = ''.join([values[x] for x in peers[k]])
         uniq_values = set(v) - set(compound)
         if len(uniq_values) == 1:
-            values[k] = list(uniq_values)[0]
-            assign_value(values, k, values[k])
+            curr_v = list(uniq_values)[0]
+            values = assign_value(values, k, curr_v)
             pass
         pass
     return values
 
 
 def reduce_puzzle(values):
-    print('reduce_puzzle')
+    # print('reduce_puzzle')
     stuck = False
     while not stuck:
         # print(values)
@@ -209,44 +239,23 @@ def search(values):
     # print('after ', values)
     if values is False:
         return False  # Failed earlier
-    if all(len(values[s]) == 1 for s in sum(diag_units, [])):
-        return values  # Solved!
-    # Choose one of the unfilled squares with the fewest possibilities
-    _, s = min((len(values[x]), x) for x in sum(diag_units, []) if len(values[x]) > 1)
-    print(s)
-    print('in search ', s, values[s])
-    # Now use recurrence to solve each one of the resulting sudokus, and
-    for v in values[s]:
-        new_dict = values.copy()
-        new_dict[s] = v
-        attempt = search(new_dict)
-        if attempt:
-            return attempt
-        pass
-    return values
-
-def search_boxes(values):
-    "Using depth-first search and propagation, try all possible values."
-    # First, reduce the puzzle using the previous function
-    values = reduce_puzzle(values)
-    # print('after ', values)
-    if values is False:
-        return False  # Failed earlier
     if all(len(values[s]) == 1 for s in boxes):
         return values  # Solved!
     # Choose one of the unfilled squares with the fewest possibilities
     _, s = min((len(values[x]), x) for x in boxes if len(values[x]) > 1)
-    print(s)
-    print('in search ', s, values[s])
+    # print(s)
+    # print('in search ', s, values[s])
     # Now use recurrence to solve each one of the resulting sudokus, and
     for v in values[s]:
         new_dict = values.copy()
         new_dict[s] = v
+        ## recursion 
         attempt = search(new_dict)
         if attempt:
             return attempt
-        pass
-    return values
+
+    ## recursion will fail if I uncomment the line below why?
+    # return values
 
 
 def solve(grid):
